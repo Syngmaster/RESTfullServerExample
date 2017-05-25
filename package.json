@@ -4,7 +4,9 @@
   "description": "Simple RESTful web service",
   "main": "server.js",
   "dependencies": {
-    "express": "^4.15.3"
+    "express": "^4.15.3",
+    "jade":"*",
+    "mongodb":"*"
   },
   "devDependencies": {},
   "scripts": {
