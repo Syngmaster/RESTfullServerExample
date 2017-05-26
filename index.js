@@ -1,15 +1,15 @@
-//1
 var http = require('http'),
     express = require('express'),
-    path = require('path');
+    path = require('path'),
     MongoClient = require('mongodb').MongoClient,
     Server = require('mongodb').Server,
     CollectionDriver = require('./collectionDriver').CollectionDriver;
-//2
+
 var app = express();
 app.set('port', process.env.PORT || 3000);
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
+app.use(express.bodyParser()); // <-- add
 
 var mongoHost = 'localHost'; //A
 var mongoPort = 27017;
@@ -26,6 +26,10 @@ mongoClient.open(function(err, mongoClient) { //C
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', function (req, res) {
+  res.send('<html><body><h1>Hello World</h1></body></html>');
+});
 
 app.get('/:collection', function(req, res) { //A
    var params = req.params; //B
@@ -56,8 +60,47 @@ app.get('/:collection/:entity', function(req, res) { //I
    }
 });
 
-app.use(function (req,res) { //1
-    res.render('404', {url:req.url}); //2
+app.post('/:collection', function(req, res) { //A
+    var object = req.body;
+    var collection = req.params.collection;
+    collectionDriver.save(collection, object, function(err,docs) {
+          if (err) { res.send(400, err); }
+          else { res.send(201, docs); } //B
+     });
+});
+
+app.put('/:collection/:entity', function(req, res) { //A
+    var params = req.params;
+    var entity = params.entity;
+    var collection = params.collection;
+    if (entity) {
+       collectionDriver.update(collection, req.body, entity, function(error, objs) { //B
+          if (error) { res.send(400, error); }
+          else { res.send(200, objs); } //C
+       });
+   } else {
+	   var error = { "message" : "Cannot PUT a whole collection" }
+	   res.send(400, error);
+   }
+});
+
+app.delete('/:collection/:entity', function(req, res) { //A
+    var params = req.params;
+    var entity = params.entity;
+    var collection = params.collection;
+    if (entity) {
+       collectionDriver.delete(collection, entity, function(error, objs) { //B
+          if (error) { res.send(400, error); }
+          else { res.send(200, objs); } //C 200 b/c includes the original doc
+       });
+   } else {
+       var error = { "message" : "Cannot DELETE a whole collection" }
+       res.send(400, error);
+   }
+});
+
+app.use(function (req,res) {
+    res.render('404', {url:req.url});
 });
 
 http.createServer(app).listen(app.get('port'), function(){
